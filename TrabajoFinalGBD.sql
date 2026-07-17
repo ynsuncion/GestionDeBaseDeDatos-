@@ -299,3 +299,193 @@ CREATE TABLE jubilados (
   edad INT NOT NULL,
   antiguedad INT NOT NULL
 );
+
+DELIMITER $$
+
+CREATE TRIGGER trg_jubilacion
+AFTER INSERT
+ON empleados
+FOR EACH ROW
+BEGIN
+
+    IF NEW.edad >= 65
+       AND NEW.antiguedad >= 30 THEN
+
+        INSERT INTO jubilados(nombre, edad, antiguedad)
+        VALUES(
+            NEW.nombre,
+            NEW.edad,
+            NEW.antiguedad
+        );
+
+    END IF;
+
+END$$
+
+DELIMITER ;
+
+INSERT INTO empleados
+VALUES('Carlos',66,35);
+
+INSERT INTO empleados
+VALUES('Juan',40,15);
+
+SELECT * FROM jubilados;
+SELECT * FROM empleados;
+
+
+
+/*
+8 - Crear un procedimiento almacenado llamado ActualizarEmpleados que tome dos  parámetros de entrada:
+
+codigo_empleado (VARCHAR, 10): El identificador del empleado a actualizar.
+
+salario_actualizado (DECIMAL): El nuevo salario del empleado.
+
+En el procedimiento, utilizar una transacción para realizar la actualización del salario del empleado:
+Obtener la información actual del empleado especificado.
+Verificar si el nuevo salario es válido (no puede ser menor que el salario actual).
+Si el salario es válido, realiza la actualización del salario del empleado.
+Si el salario actualizado sería menor que el salario actual, muestra un mensaje al usuario indicando que la operación se cancela y realiza un rollback.
+
+Llamar al procedimiento ActualizarEmpleados con diferentes valores de codigo_empleado y salario_actualizado, incluyendo casos donde el salario actualizado sería menor que el salario actual.
+Verificar que el procedimiento funcione correctamente y que se muestren mensajes de error y se realice un rollback cuando corresponda.
+
+*/
+
+CREATE DATABASE ejercicio8;
+USE ejercicio8;
+
+CREATE TABLE empleados (
+    codigo_empleado VARCHAR(10) PRIMARY KEY,
+    nombre VARCHAR(50),
+    salario DECIMAL(10,2)
+);
+
+INSERT INTO empleados VALUES
+('E001','Juan Perez',50000),
+('E002','Ana Gomez',65000),
+('E003','Carlos Lopez',80000);
+
+DELIMITER $$
+
+CREATE PROCEDURE ActualizarEmpleados(
+    IN p_codigo_empleado VARCHAR(10),
+	IN p_salario_actualizado DECIMAL(10,2)
+)
+BEGIN
+    DECLARE salario_actual DECIMAL(10,2);
+
+    START TRANSACTION;
+
+   
+    SELECT salario
+    INTO salario_actual
+    FROM empleados
+	WHERE codigo_empleado = p_codigo_empleado;
+
+ IF p_salario_actualizado < salario_actual THEN
+    ROLLBACK;
+    SELECT 'El salario actualizado es menor que el salario actual. Operación cancelada.' AS mensaje;
+ELSE
+    UPDATE empleados
+    SET salario = p_salario_actualizado
+    WHERE codigo_empleado = p_codigo_empleado;
+
+    COMMIT;
+
+    SELECT 'Salario actualizado correctamente.' AS mensaje;
+END IF;
+
+END$$
+DELIMITER ;
+
+CALL ActualizarEmpleados('E001',60000);
+CALL ActualizarEmpleados('E002',50000);
+
+SELECT * FROM empleados;
+
+/*
+9 - Gestión de Usuarios
+
+a) Crear un usuario sin privilegios específicos
+b) Crear un usuario con privilegios de lectura sobre la base pubs
+c) Crear un usuario con privilegios de escritura sobre la base pubs
+d) Crear un usuario con todos los privilegios sobre la base pubs
+e) Crear un usuario con privilegios de lectura sobre la tabla titles
+f) Eliminar al usuario que tiene todos los privilegios sobre la base pubs
+g) Eliminar a dos usuarios a la vez
+h) Eliminar un usuario y sus privilegios asociados
+i) Revisar los privilegios de un usuario
+
+*/
+USE pubs;
+
+-- a) Crear un usuario sin privilegios específicos
+CREATE USER 'yamila'@'localhost' IDENTIFIED BY 'clave123';
+
+-- b) Crear un usuario con privilegios de lectura sobre la base pubs
+CREATE USER 'daniel_lectura'@'localhost' IDENTIFIED BY 'clave123';
+
+GRANT SELECT
+ON pubs.*
+TO 'daniel_lectura'@'localhost';
+
+-- c) Crear un usuario con privilegios de escritura sobre la base pubs
+CREATE USER 'jorge_escritura'@'localhost' IDENTIFIED BY 'clave123';
+
+GRANT INSERT, UPDATE, DELETE
+ON pubs.*
+TO 'jorge_escritura'@'localhost';
+
+-- d) Crear un usuario con todos los privilegios sobre la base pubs
+CREATE USER 'francisco_admin'@'localhost' IDENTIFIED BY 'clave123';
+
+GRANT ALL PRIVILEGES
+ON pubs.*
+TO 'francisco_admin'@'localhost';
+
+-- e) Crear un usuario con privilegios de lectura sobre la tabla titles
+CREATE USER 'luciana_titles'@'localhost' IDENTIFIED BY 'clave123';
+
+GRANT SELECT
+ON pubs.titles
+TO 'luciana_titles'@'localhost';
+
+
+-- f) Eliminar al usuario que tiene todos los privilegios sobre la base pubs
+DROP USER 'francisco_admin'@'localhost';
+
+-- g) Eliminar dos usuarios a la vez
+DROP USER
+'yamila'@'localhost',
+'luciana_titles'@'localhost';
+
+-- h) Eliminar un usuario y sus privilegios asociados
+DROP USER 'jorge_escritura'@'localhost';
+
+-- i) Revisar los privilegios de un usuario
+SHOW GRANTS FOR 'daniel_lectura'@'localhost';
+
+/* 10 – Gestor Mongo DB
+
+a) Activar la base de datos "local" y luego imprimir las colecciones existentes.
+b) Activar la base de datos "test" y luego imprimir las colecciones existentes.
+c) Activar la base de datos "baseEjemplo2".
+d) Mostrar las colecciones existentes en la base de datos "baseEjemplo2".
+e) Crear otra colección llamada usuarios donde almacenar dos documentos con los 
+campos nombre y clave.
+f) Mostrar nuevamente las colecciones existentes en la base de datos "baseEjemplo2".
+
+En la base pubs:
+g) Insertar 2 documentos en la colección clientes con '_id' no repetidos
+h) Intentar insertar otro documento con clave repetida.
+i) Mostrar todos los documentos de la colección libros.
+
+j) Crear una base de datos llamada "blog".
+k) Agregar una colección llamada "posts" e insertar 1 documento con una estructura a 
+su elección.
+l) Mostrar todas las bases de datos actuales.
+m) Eliminar la colección "posts"
+n) Eliminar la base de datos "blog" y mostrar las bases de datos existentes.
+*/
